@@ -7,9 +7,10 @@ from botocore.exceptions import ClientError
 import json
 import contextlib
 from multiprocessing import Pool
+import time
 
 server_token="notsecured"   # todo: change it to get from env
-
+sleep_time=30
 sqs_client = boto3.client("sqs",
     region_name="us-east-1",#os.environ.get('AWS_DEFAULT_REGION'),
     endpoint_url="http://localhost:4566",#os.environ.get('AWS_ENDPOINT'),
@@ -22,8 +23,8 @@ queue_url = sqs_client.get_queue_url(
 s3_client = boto3.client("s3",
     region_name="us-east-1",#os.environ.get('AWS_DEFAULT_REGION'),
     endpoint_url="http://localhost:4566",#os.environ.get('AWS_ENDPOINT'),
-    aws_access_key_id="my_access_key", #os.environ.get('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key="my_secret_key")#os.environ.get('AWS_SECRET_ACCESS_KEY'))
+    aws_access_key_id="test", #os.environ.get('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key="test")#os.environ.get('AWS_SECRET_ACCESS_KEY'))
 
 bucket_name="checkpoint-s3"
 
@@ -32,8 +33,14 @@ def read_messages_from_sqs():
         QueueUrl=queue_url,
         MaxNumberOfMessages=2
     )
-    with Pool(5) as p:
-        print(p.map(manage_message,response["Messages"]))
+    try:
+        response["Messages"]
+        with Pool(5) as p:
+            p.map(manage_message,response["Messages"])
+        return True
+    except:
+        return False
+
 
 def manage_message(message):
     try:
@@ -44,7 +51,10 @@ def manage_message(message):
     return True
 
 def delete_message_from_sqs(message):
-    pass
+    response = sqs_client.delete_message(
+        QueueUrl=queue_url,
+        ReceiptHandle=message["ReceiptHandle"]
+    ) 
    
 def upload_message_to_s3(message):
     tfile=tempfile.NamedTemporaryFile(mode='w',dir=os.getcwd(), suffix=".tmp.json", delete=False)
@@ -76,11 +86,14 @@ def upload_file_to_s3(file_name, bucket, object_name=None):
     return True
 
 
-
-
-        
-
-        
-
 if __name__ == '__main__':
-    read_messages_from_sqs()
+    logging.basicConfig(level = logging.INFO)
+    while True:
+        any_messages=read_messages_from_sqs()
+        if any_messages==True:
+            logging.info("handeled messages")
+            continue
+        else:
+            logging.info(f"sleeping for {sleep_time} seconds")
+            time.sleep(sleep_time)
+            
