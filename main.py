@@ -6,6 +6,7 @@ import tempfile
 from botocore.exceptions import ClientError
 import json
 import contextlib
+from multiprocessing import Pool
 
 server_token="notsecured"   # todo: change it to get from env
 
@@ -31,14 +32,16 @@ def read_messages_from_sqs():
         QueueUrl=queue_url,
         MaxNumberOfMessages=2
     )
-    #print(response)
-    print(response["Messages"])
-    for message in response["Messages"]:
-        manage_message(message)
+    with Pool(5) as p:
+        print(p.map(manage_message,response["Messages"]))
 
 def manage_message(message):
-    upload_message_to_s3(message)
-    delete_message_from_sqs(message)
+    try:
+        upload_message_to_s3(message)
+        delete_message_from_sqs(message)
+    except:
+        return False
+    return True
 
 def delete_message_from_sqs(message):
     pass
