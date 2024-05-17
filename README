@@ -1,0 +1,16 @@
+building and runing container: 
+git clone 
+cd
+docker build -t <name> .
+docker run <name>
+
+runing direct with python:
+pip install -r requirements.txt
+py main.py 
+
+push message to localstack SQS named checkpoint-SQS (make sure localstack is runing and checkpoint-terraform was apllied) 
+with checkpoint-ms-1, if a message is there you should see 
+in logs "INFO:root:handeled messages" otherwise "INFO:root:sleeping for x seconds"
+
+
+
